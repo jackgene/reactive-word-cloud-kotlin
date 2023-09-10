@@ -23,6 +23,7 @@ repositories {
 }
 
 dependencies {
+    implementation("io.github.nomisrev:kotlin-kafka:0.3.1")
     implementation("io.ktor:ktor-server-core-jvm")
     implementation("io.ktor:ktor-server-host-common-jvm")
     implementation("io.ktor:ktor-serialization-kotlinx-json-jvm")
