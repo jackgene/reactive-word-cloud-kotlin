@@ -2,6 +2,7 @@
 
 package com.jackleow.wordcloud.plugins
 
+import com.jackleow.wordcloud.services.DebuggingWordCloudService
 import com.jackleow.wordcloud.services.WordCloudService
 import io.ktor.server.application.*
 import io.ktor.server.routing.*
@@ -28,7 +29,9 @@ suspend fun Flow<Frame>.collectInto(outgoing: SendChannel<Frame>) {
 }
 
 @OptIn(FlowPreview::class)
-fun Application.configureRouting(service: WordCloudService) {
+fun Application.configureRouting(
+    service: WordCloudService, debuggingService: DebuggingWordCloudService
+) {
     install(WebSockets) {
         timeout = Duration.ofSeconds(300)
     }
@@ -36,7 +39,7 @@ fun Application.configureRouting(service: WordCloudService) {
     routing {
         webSocket("/") {
             if (call.parameters["debug"].toBoolean())
-                service.debugWordCounts
+                debuggingService.wordCounts
                     .sample(100.milliseconds)
                     .map { Frame.Text(Json.encodeToString(it)) }
                     .collectInto(outgoing)
