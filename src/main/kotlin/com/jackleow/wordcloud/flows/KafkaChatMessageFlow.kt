@@ -27,10 +27,7 @@ object KafkaChatMessageFlow {
         ).let { settings ->
             KafkaReceiver(settings)
                 .receive(topicName)
-                .map {
-                    it.offset.acknowledge()
-                    it.value()
-                }
+                .map { it.value() }
                 .shareIn(CoroutineScope(Dispatchers.Default), SharingStarted.Lazily)
         }
 }
