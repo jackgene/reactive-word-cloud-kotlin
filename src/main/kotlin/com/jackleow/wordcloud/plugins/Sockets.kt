@@ -2,8 +2,6 @@
 
 package com.jackleow.wordcloud.plugins
 
-import com.jackleow.wordcloud.flows.WordCountDebugFlow
-import com.jackleow.wordcloud.models.Counts
 import com.jackleow.wordcloud.services.WordCloudService
 import io.ktor.server.application.*
 import io.ktor.server.routing.*
@@ -36,21 +34,11 @@ fun Application.configureRouting(service: WordCloudService) {
     }
 
     routing {
-        val wordCounts: Flow<Counts> = service.wordCounts
-        val wordCountsWithDebug: Flow<WordCountDebugFlow.Counts> = WordCountDebugFlow(3, service.chatMessages)
-            .shareIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, 1)
-
         webSocket("/word-count") {
-            if (call.parameters["debug"].toBoolean())
-                wordCountsWithDebug
-                    .sample(100.milliseconds)
-                    .map { Frame.Text(Json.encodeToString(it)) }
-                    .collectInto(outgoing)
-            else
-                wordCounts
-                    .sample(100.milliseconds)
-                    .map { Frame.Text(Json.encodeToString(it)) }
-                    .collectInto(outgoing)
+            service.wordCounts
+                .sample(100.milliseconds)
+                .map { Frame.Text(Json.encodeToString(it)) }
+                .collectInto(outgoing)
         }
     }
 }
