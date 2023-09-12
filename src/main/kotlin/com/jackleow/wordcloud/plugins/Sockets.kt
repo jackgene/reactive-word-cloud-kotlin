@@ -3,12 +3,8 @@
 package com.jackleow.wordcloud.plugins
 
 import com.jackleow.wordcloud.flows.WordCountDebugFlow
-import com.jackleow.wordcloud.flows.WordCountFlow
-import com.jackleow.wordcloud.models.ChatMessage
-import io.github.nomisRev.kafka.map
-import io.github.nomisRev.kafka.receiver.AutoOffsetReset
-import io.github.nomisRev.kafka.receiver.KafkaReceiver
-import io.github.nomisRev.kafka.receiver.ReceiverSettings
+import com.jackleow.wordcloud.models.Counts
+import com.jackleow.wordcloud.services.WordCloudService
 import io.ktor.server.application.*
 import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
@@ -18,7 +14,6 @@ import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.flow.*
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import org.apache.kafka.common.serialization.StringDeserializer
 import java.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -35,29 +30,14 @@ suspend fun Flow<Frame>.collectInto(outgoing: SendChannel<Frame>) {
 }
 
 @OptIn(FlowPreview::class)
-fun Application.configureRouting() {
+fun Application.configureRouting(service: WordCloudService) {
     install(WebSockets) {
         timeout = Duration.ofSeconds(300)
     }
 
     routing {
-        val kafkaSettings: ReceiverSettings<String, ChatMessage> = ReceiverSettings(
-            "localhost:9092",
-            StringDeserializer(),
-            StringDeserializer().map(Json::decodeFromString),
-            groupId = "word-cloud-app",
-            autoOffsetReset = AutoOffsetReset.Earliest
-        )
-        val chatMessages: Flow<ChatMessage> = KafkaReceiver(kafkaSettings)
-            .receive("word-cloud.chat-message")
-            .map {
-                it.offset.acknowledge()
-                it.value()
-            }
-            .shareIn(CoroutineScope(Dispatchers.Default), SharingStarted.Lazily)
-        val wordCounts: Flow<WordCountFlow.Counts> = WordCountFlow(3, chatMessages)
-            .shareIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, 1)
-        val wordCountsWithDebug: Flow<WordCountDebugFlow.Counts> = WordCountDebugFlow(3, chatMessages)
+        val wordCounts: Flow<Counts> = service.wordCounts
+        val wordCountsWithDebug: Flow<WordCountDebugFlow.Counts> = WordCountDebugFlow(3, service.chatMessages)
             .shareIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, 1)
 
         webSocket("/word-count") {

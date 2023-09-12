@@ -1,8 +1,5 @@
 package com.jackleow.wordcloud.flows
 
-import com.jackleow.wordcloud.flows.WordCountFlow.STOP_WORDS
-import com.jackleow.wordcloud.flows.WordCountFlow.VALID_WORD_PATTERN
-import com.jackleow.wordcloud.flows.WordCountFlow.WORD_SEPARATOR_PATTERN
 import com.jackleow.wordcloud.models.ChatMessage
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -30,6 +27,12 @@ object WordCountDebugFlow {
         val countsByWord: Map<String, Int>
     )
 
+    private const val MIN_WORD_LENGTH: Int = 0
+    private const val MAX_WORD_LENGTH: Int = 0
+    private val STOP_WORDS: Set<String> = setOf()
+    private val VALID_WORD_PATTERN = Regex("")
+    private val WORD_SEPARATOR_PATTERN = Regex("")
+
     operator fun invoke(maxWordsPerSender: Int, chatMessageSource: Flow<ChatMessage>): Flow<Counts> =
         chatMessageSource
             .map { msg: ChatMessage ->
@@ -42,7 +45,7 @@ object WordCountDebugFlow {
                         ExtractedWord(
                             word, word.lowercase().trim('-'),
                             VALID_WORD_PATTERN.matches(word)
-                                    && word.length in WordCountFlow.MIN_WORD_LENGTH..WordCountFlow.MAX_WORD_LENGTH
+                                    && word.length in MIN_WORD_LENGTH..MAX_WORD_LENGTH
                                     && !STOP_WORDS.contains(word)
                         )
                     }
