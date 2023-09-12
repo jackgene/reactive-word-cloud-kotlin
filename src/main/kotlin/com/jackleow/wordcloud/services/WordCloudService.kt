@@ -7,10 +7,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 
-class WordCloudService(
-    config: ApplicationConfig,
-    chatMessages: Flow<ChatMessage>
-) {
+class WordCloudService(config: ApplicationConfig, chatMessages: Flow<ChatMessage>) {
     companion object {
         private data class SenderAndText(
             val sender: String,
