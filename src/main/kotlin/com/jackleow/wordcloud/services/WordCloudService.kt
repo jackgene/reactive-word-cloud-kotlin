@@ -1,8 +1,7 @@
 package com.jackleow.wordcloud.services
 
 import com.jackleow.wordcloud.data.WordsBySenderRepository
-import com.jackleow.wordcloud.models.ChatMessage
-import com.jackleow.wordcloud.models.Counts
+import com.jackleow.wordcloud.models.*
 import io.ktor.server.config.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -80,4 +79,48 @@ class WordCloudService(
                 .map(::Counts)
                 .shareIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, 1)
         }
+
+    val debugWordCounts: Flow<DebuggingCounts> = chatMessages
+        .map { msg: ChatMessage ->
+            val words: List<String> = WORD_SEPARATOR_PATTERN
+                .split(msg.text.trim())
+
+            Pair(
+                msg,
+                words.map { word ->
+                    ExtractedWord(
+                        word, word.lowercase().trim('-'),
+                        VALID_WORD_PATTERN.matches(word)
+                                && word.length in minWordLength..maxWordLength
+                                && !stopWords.contains(word)
+                    )
+                }
+            )
+        }
+        .runningFold(
+            DebuggingCounts(listOf(), mapOf(), mapOf())
+        ) { accum: DebuggingCounts, (msg: ChatMessage, extractedWords: List<ExtractedWord>) ->
+            val validWords: List<String> = extractedWords
+                .mapNotNull { if (it.isValid) it.normalizedWord else null }
+            val wordsBySender: Map<String, List<String>> =
+                accum.wordsBySender.let { wordsBySender: Map<String, List<String>> ->
+                    val oldWords: List<String> = wordsBySender[msg.sender] ?: listOf()
+                    val newWords: List<String> = (validWords + oldWords)
+                        .distinct()
+                        .take(maxWordsPerSender)
+
+                    wordsBySender + (msg.sender to newWords)
+                }
+            accum.copy(
+                chatMessagesAndWords = accum.chatMessagesAndWords + ChatMessageAndWords(
+                    msg,
+                    extractedWords
+                ),
+                wordsBySender = wordsBySender,
+                countsByWord = wordsBySender
+                    .flatMap { it.value.map { token -> token to it.key } }
+                    .groupBy({ it.first }, { it.second }).mapValues { it.value.size }
+            )
+        }
+        .shareIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, 1)
 }

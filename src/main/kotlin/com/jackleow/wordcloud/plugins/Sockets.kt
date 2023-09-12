@@ -35,10 +35,16 @@ fun Application.configureRouting(service: WordCloudService) {
 
     routing {
         webSocket("/") {
-            service.wordCounts
-                .sample(100.milliseconds)
-                .map { Frame.Text(Json.encodeToString(it)) }
-                .collectInto(outgoing)
+            if (call.parameters["debug"].toBoolean())
+                service.debugWordCounts
+                    .sample(100.milliseconds)
+                    .map { Frame.Text(Json.encodeToString(it)) }
+                    .collectInto(outgoing)
+            else
+                service.wordCounts
+                    .sample(100.milliseconds)
+                    .map { Frame.Text(Json.encodeToString(it)) }
+                    .collectInto(outgoing)
         }
     }
 }
