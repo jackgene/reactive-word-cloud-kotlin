@@ -15,8 +15,8 @@ import kotlinx.serialization.Serializable
 
 class WordCloudService(
     config: ApplicationConfig,
-    private val wordsByPersonRepository: WordsByPersonRepository,
-    val chatMessages: Flow<ChatMessage>
+    wordsByPersonRepository: WordsByPersonRepository,
+    chatMessages: Flow<ChatMessage>
 ) {
     companion object {
         @Serializable
