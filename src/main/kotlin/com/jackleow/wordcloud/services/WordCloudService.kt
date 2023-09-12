@@ -1,6 +1,5 @@
 package com.jackleow.wordcloud.services
 
-import com.jackleow.wordcloud.data.WordsBySenderRepository
 import com.jackleow.wordcloud.models.*
 import io.ktor.server.config.*
 import kotlinx.coroutines.CoroutineScope
@@ -10,7 +9,6 @@ import kotlinx.coroutines.flow.*
 
 class WordCloudService(
     config: ApplicationConfig,
-    wordsBySenderRepository: WordsBySenderRepository,
     chatMessages: Flow<ChatMessage>
 ) {
     companion object {
@@ -67,18 +65,14 @@ class WordCloudService(
         .groupBy({ it.first }, { it.second }).mapValues { it.value.size }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val wordCounts: Flow<Counts> = flow { emit(wordsBySenderRepository.load()) }
-        .flatMapLatest { initialWordsBySender: Map<String, List<String>> ->
-            chatMessages
-                .map(::normalizeText)
-                .flatMapConcat(::splitIntoWords)
-                .filter(::isValidWord)
-                .runningFold(initialWordsBySender, ::updateWordsForSender)
-                .onEach(wordsBySenderRepository::save)
-                .map(::countWords)
-                .map(::Counts)
-                .shareIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, 1)
-        }
+    val wordCounts: Flow<Counts> = chatMessages
+        .map(::normalizeText)
+        .flatMapConcat(::splitIntoWords)
+        .filter(::isValidWord)
+        .runningFold(mapOf(), ::updateWordsForSender)
+        .map(::countWords)
+        .map(::Counts)
+        .shareIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, 1)
 
     val debugWordCounts: Flow<DebuggingCounts> = chatMessages
         .map { msg: ChatMessage ->
