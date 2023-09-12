@@ -3,6 +3,7 @@ package com.jackleow.wordcloud
 import com.jackleow.wordcloud.flows.KafkaChatMessageFlow
 import com.jackleow.wordcloud.models.ChatMessage
 import com.jackleow.wordcloud.plugins.configureRouting
+import com.jackleow.wordcloud.services.DebuggingWordCloudService
 import com.jackleow.wordcloud.services.WordCloudService
 import io.ktor.server.application.*
 import kotlinx.coroutines.flow.Flow
@@ -18,6 +19,7 @@ fun Application.module() {
         topicName = environment.config.property("kafka.topicName.chatMessage").getString()
     )
     val service = WordCloudService(environment.config, chatMessages)
+    val debuggingService = DebuggingWordCloudService(environment.config, chatMessages)
 
-    configureRouting(service)
+    configureRouting(service, debuggingService)
 }
