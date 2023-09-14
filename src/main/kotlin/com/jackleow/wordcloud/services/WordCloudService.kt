@@ -60,7 +60,7 @@ class WordCloudService(
     }
 
     private fun countWords(wordsByPerson: Map<String, List<String>>): Map<String, Int> = wordsByPerson
-        .flatMap { it.value.map { token -> token to it.key } }
+        .flatMap { it.value.map { word -> word to it.key } }
         .groupBy({ it.first }, { it.second }).mapValues { it.value.size }
 
     @OptIn(ExperimentalCoroutinesApi::class)
