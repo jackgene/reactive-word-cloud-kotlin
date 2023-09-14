@@ -34,7 +34,7 @@ fun Application.configureRouting(service: WordCloudService) {
     }
 
     routing {
-        webSocket("/word-count") {
+        webSocket("/") {
             service.wordCounts
                 .sample(100.milliseconds)
                 .map { Frame.Text(Json.encodeToString(it)) }
