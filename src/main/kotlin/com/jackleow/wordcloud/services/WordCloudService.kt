@@ -6,9 +6,10 @@ import com.jackleow.wordcloud.models.*
 import io.github.nomisRev.kafka.*
 import io.ktor.server.config.*
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Dispatchers.Default
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.SharingStarted.Companion.Eagerly
 
 class WordCloudService(config: ApplicationConfig, chatMessages: Flow<ChatMessage>) {
     companion object {
@@ -21,8 +22,6 @@ class WordCloudService(config: ApplicationConfig, chatMessages: Flow<ChatMessage
             val sender: String,
             val word: String
         )
-
-        val NON_LETTER_PATTERN = Regex("""[^\p{L}]+""")
     }
 
     private val wordCloudConfig: ApplicationConfig = config.config("wordCloud")
@@ -31,6 +30,7 @@ class WordCloudService(config: ApplicationConfig, chatMessages: Flow<ChatMessage
     private val maxWordLength: Int = wordCloudConfig.property("maxWordLength").getString().toInt()
     private val stopWords: Set<String> = wordCloudConfig.property("stopWords").getList().toSet()
 
+    val NON_LETTER_PATTERN = Regex("""[^\p{L}]+""")
     private fun normalizeText(chatMessage: ChatMessage): SenderAndText =
         SenderAndText(
             chatMessage.sender,
@@ -52,17 +52,22 @@ class WordCloudService(config: ApplicationConfig, chatMessages: Flow<ChatMessage
 
     private fun updateWordsForSender(
         wordsBySender: Map<String, List<String>>,
-        senderAndWord: SenderAndWord
+        senderWord: SenderAndWord
     ): Map<String, List<String>> {
-        val oldWords: List<String> = wordsBySender[senderAndWord.sender] ?: listOf()
-        val newWords: List<String> = (listOf(senderAndWord.word) + oldWords).distinct().take(maxWordsPerSender)
-
-        return wordsBySender + (senderAndWord.sender to newWords)
+        val oldWords: List<String> =
+            wordsBySender[senderWord.sender] ?: listOf()
+        val newWords: List<String> =
+            (listOf(senderWord.word) + oldWords).distinct()
+                .take(maxWordsPerSender)
+        return wordsBySender + (senderWord.sender to newWords)
     }
 
-    private fun countWords(wordsBySender: Map<String, List<String>>): Map<String, Int> = wordsBySender
+    private fun countWords(
+        wordsBySender: Map<String, List<String>>
+    ): Map<String, Int> = wordsBySender
         .flatMap { it.value.map { word -> word to it.key } }
-        .groupBy({ it.first }, { it.second }).mapValues { it.value.size }
+        .groupBy({ it.first }, { it.second })
+        .mapValues { it.value.size }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val wordCounts: Flow<Counts> = chatMessages
@@ -72,5 +77,5 @@ class WordCloudService(config: ApplicationConfig, chatMessages: Flow<ChatMessage
         .runningFold(mapOf(), ::updateWordsForSender)
         .map(::countWords)
         .map(::Counts)
-        .shareIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, 1)
+        .shareIn(CoroutineScope(Default), Eagerly, 1)
 }
