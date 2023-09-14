@@ -4,7 +4,6 @@ import com.jackleow.wordcloud.models.ChatMessage
 import com.jackleow.wordcloud.models.Event
 import com.jackleow.wordcloud.models.DebuggingCounts
 import com.jackleow.wordcloud.models.ExtractedWord
-import com.jackleow.wordcloud.services.WordCloudService.Companion.NON_LETTER_PATTERN
 import io.ktor.server.config.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -13,6 +12,9 @@ import kotlinx.coroutines.flow.*
 class DebuggingWordCloudService(
     config: ApplicationConfig, chatMessages: Flow<ChatMessage>
 ) {
+    companion object {
+        val NON_LETTER_PATTERN = Regex("""[^\p{L}]+""")
+    }
     private val wordCloudConfig: ApplicationConfig = config.config("wordCloud")
     private val maxWordsPerSender: Int = wordCloudConfig.property("maxWordsPerSender").getString().toInt()
     private val minWordLength: Int = wordCloudConfig.property("minWordLength").getString().toInt()
