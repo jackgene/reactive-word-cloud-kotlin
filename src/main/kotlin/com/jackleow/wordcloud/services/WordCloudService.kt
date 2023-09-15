@@ -72,7 +72,6 @@ class WordCloudService(config: ApplicationConfig, chatMessages: Flow<ChatMessage
         .flatMapConcat(::splitIntoWords)
         .filter(::isValidWord)
         .runningFold(mapOf(), ::updateWordsForSender)
-        .map(::countWords)
-        .map(::Counts)
+        .map(::countWords).map(::Counts)
         .shareIn(CoroutineScope(Default), Eagerly, 1)
 }
