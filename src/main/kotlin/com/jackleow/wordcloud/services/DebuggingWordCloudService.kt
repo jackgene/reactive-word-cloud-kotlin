@@ -22,14 +22,14 @@ class DebuggingWordCloudService(
 
     val wordCounts: Flow<DebuggingCounts> = chatMessages
         .map { msg: ChatMessage ->
-            val words: List<String> = WORD_SEPARATOR_PATTERN
-                .split(msg.text.trim())
+            val words: List<String> = WORD_SEPARATOR_PATTERN.split(msg.text.trim())
 
-            Pair(
+            Triple(
                 msg,
+                msg.text.lowercase(),
                 words.map { word ->
                     ExtractedWord(
-                        word, word.lowercase().trim('-'),
+                        word,
                         VALID_WORD_PATTERN.matches(word)
                                 && word.length in minWordLength..maxWordLength
                                 && !stopWords.contains(word)
@@ -39,9 +39,9 @@ class DebuggingWordCloudService(
         }
         .runningFold(
             DebuggingCounts(listOf(), mapOf(), mapOf())
-        ) { accum: DebuggingCounts, (msg: ChatMessage, extractedWords: List<ExtractedWord>) ->
+        ) { accum: DebuggingCounts, (msg: ChatMessage, normalizedText: String, extractedWords: List<ExtractedWord>) ->
             val validWords: List<String> = extractedWords
-                .mapNotNull { if (it.isValid) it.normalizedWord else null }
+                .mapNotNull { if (it.isValid) it.word else null }
             val wordsBySender: Map<String, List<String>> =
                 accum.wordsBySender.let { wordsBySender: Map<String, List<String>> ->
                     val oldWords: List<String> = wordsBySender[msg.sender] ?: listOf()
@@ -53,8 +53,7 @@ class DebuggingWordCloudService(
                 }
             accum.copy(
                 chatMessagesAndWords = accum.chatMessagesAndWords + ChatMessageAndWords(
-                    msg,
-                    extractedWords
+                    msg, normalizedText, extractedWords
                 ),
                 wordsBySender = wordsBySender,
                 countsByWord = wordsBySender

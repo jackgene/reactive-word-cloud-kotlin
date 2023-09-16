@@ -4,14 +4,14 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class ExtractedWord(
-    val rawWord: String,
-    val normalizedWord: String,
+    val word: String,
     val isValid: Boolean
 )
 
 @Serializable
 data class ChatMessageAndWords(
     val chatMessage: ChatMessage,
+    val normalizedText: String,
     val words: List<ExtractedWord>
 )
 
