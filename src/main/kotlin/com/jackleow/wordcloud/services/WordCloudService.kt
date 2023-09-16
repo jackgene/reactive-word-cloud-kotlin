@@ -28,24 +28,26 @@ class WordCloudService(config: ApplicationConfig, chatMessages: Flow<ChatMessage
     private val stopWords: Set<String> = wordCloudConfig.property("stopWords").getList().toSet()
 
     val NON_LETTER_PATTERN = Regex("""[^\p{L}]+""")
-    private fun normalizeText(chatMessage: ChatMessage): SenderAndText =
+    private fun normalizeText(msg: ChatMessage): SenderAndText =
         SenderAndText(
-            chatMessage.sender,
-            chatMessage.text
+            msg.sender,
+            msg.text
                 .replace(NON_LETTER_PATTERN, " ")
                 .trim()
                 .lowercase()
         )
 
-    private fun splitIntoWords(senderAndText: SenderAndText): Flow<SenderAndWord> = senderAndText.text
+    private fun splitIntoWords(
+        senderText: SenderAndText
+    ): Flow<SenderAndWord> = senderText.text
         .split(" ")
-        .map { word: String -> SenderAndWord(senderAndText.sender, word) }
+        .map { SenderAndWord(senderText.sender, it) }
         .reversed()
         .asFlow()
 
-    private fun isValidWord(senderAndWord: SenderAndWord): Boolean =
-        senderAndWord.word.length in minWordLength..maxWordLength
-                && !stopWords.contains(senderAndWord.word)
+    private fun isValidWord(senderWord: SenderAndWord): Boolean =
+        senderWord.word.length in minWordLength..maxWordLength
+                && !stopWords.contains(senderWord.word)
 
     private fun updateWordsForSender(
         wordsBySender: Map<String, List<String>>,
