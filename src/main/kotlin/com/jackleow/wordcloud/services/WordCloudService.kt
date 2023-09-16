@@ -11,7 +11,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
-import kotlinx.serialization.Serializable
 
 class WordCloudService(
     config: ApplicationConfig,
@@ -19,14 +18,18 @@ class WordCloudService(
     chatMessages: Flow<ChatMessage>
 ) {
     companion object {
-        @Serializable
+        private data class PersonAndText(
+            val person: String,
+            val text: String
+        )
+
         private data class PersonAndWord(
             val person: String,
             val word: String
         )
 
         val VALID_WORD_PATTERN = Regex("""(\p{L}+(?:-\p{L}+)*)""")
-        val WORD_SEPARATOR_PATTERN = Regex("""[^\p{L}\-]+""")
+        val WORD_SEPARATOR_PATTERN = Regex("""[^\p{L}]+""")
     }
 
     private val wordCloudConfig: ApplicationConfig = config.config("wordCloud")
@@ -35,14 +38,14 @@ class WordCloudService(
     private val maxWordLength: Int = wordCloudConfig.property("maxWordLength").getString().toInt()
     private val stopWords: Set<String> = wordCloudConfig.property("stopWords").getList().toSet()
 
-    private fun splitIntoWords(chatMessage: ChatMessage): Flow<PersonAndWord> = WORD_SEPARATOR_PATTERN
-        .split(chatMessage.text.trim())
-        .map { word: String -> PersonAndWord(chatMessage.sender, word) }
+    private fun normalizeText(chatMessage: ChatMessage): PersonAndText =
+        PersonAndText(chatMessage.sender, chatMessage.text.lowercase())
+
+    private fun splitIntoWords(personAndText: PersonAndText): Flow<PersonAndWord> = WORD_SEPARATOR_PATTERN
+        .split(personAndText.text.trim())
+        .map { word: String -> PersonAndWord(personAndText.person, word) }
         .reversed()
         .asFlow()
-
-    private fun normalizeWord(personAndWord: PersonAndWord): PersonAndWord =
-        personAndWord.copy(word = personAndWord.word.lowercase().trim('-'))
 
     private fun isValidWord(personAndWord: PersonAndWord): Boolean =
         VALID_WORD_PATTERN.matches(personAndWord.word)
@@ -67,8 +70,8 @@ class WordCloudService(
     val wordCounts: Flow<Counts> = flow { emit(wordsByPersonRepository.load()) }
         .flatMapLatest { initialWordsByPerson: Map<String, List<String>> ->
             chatMessages
+                .map(::normalizeText)
                 .flatMapConcat(::splitIntoWords)
-                .map(::normalizeWord)
                 .filter(::isValidWord)
                 .runningFold(initialWordsByPerson, ::updateWordsForPerson)
                 .onEach(wordsByPersonRepository::save)
