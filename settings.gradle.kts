@@ -1,1 +1,1 @@
-rootProject.name = "word-cloud-kotlin"
+rootProject.name = "reactive-word-cloud-kotlin"
