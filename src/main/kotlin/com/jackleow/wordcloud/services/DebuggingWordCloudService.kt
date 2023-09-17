@@ -4,7 +4,6 @@ import com.jackleow.wordcloud.models.ChatMessage
 import com.jackleow.wordcloud.models.ChatMessageAndWords
 import com.jackleow.wordcloud.models.DebuggingCounts
 import com.jackleow.wordcloud.models.ExtractedWord
-import com.jackleow.wordcloud.services.WordCloudService.Companion.VALID_WORD_PATTERN
 import com.jackleow.wordcloud.services.WordCloudService.Companion.NON_LETTER_PATTERN
 import io.ktor.server.config.*
 import kotlinx.coroutines.CoroutineScope
@@ -30,8 +29,7 @@ class DebuggingWordCloudService(
                 words.map { word ->
                     ExtractedWord(
                         word,
-                        VALID_WORD_PATTERN.matches(word)
-                                && word.length in minWordLength..maxWordLength
+                        word.length in minWordLength..maxWordLength
                                 && !stopWords.contains(word)
                     )
                 }
