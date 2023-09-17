@@ -5,7 +5,7 @@ import com.jackleow.wordcloud.models.ChatMessageAndWords
 import com.jackleow.wordcloud.models.DebuggingCounts
 import com.jackleow.wordcloud.models.ExtractedWord
 import com.jackleow.wordcloud.services.WordCloudService.Companion.VALID_WORD_PATTERN
-import com.jackleow.wordcloud.services.WordCloudService.Companion.WORD_SEPARATOR_PATTERN
+import com.jackleow.wordcloud.services.WordCloudService.Companion.NON_LETTER_PATTERN
 import io.ktor.server.config.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -22,11 +22,11 @@ class DebuggingWordCloudService(
 
     val wordCounts: Flow<DebuggingCounts> = chatMessages
         .map { msg: ChatMessage ->
-            val words: List<String> = WORD_SEPARATOR_PATTERN.split(msg.text.trim())
+            val normalizedText: String = msg.text.replace(NON_LETTER_PATTERN, " ").trim().lowercase()
+            val words: List<String> = normalizedText.split(" ").reversed()
 
             Triple(
-                msg,
-                msg.text.lowercase(),
+                msg, normalizedText,
                 words.map { word ->
                     ExtractedWord(
                         word,
