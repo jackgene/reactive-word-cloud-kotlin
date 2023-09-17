@@ -28,7 +28,6 @@ class WordCloudService(
             val word: String
         )
 
-        val VALID_WORD_PATTERN = Regex("""(\p{L}+(?:-\p{L}+)*)""")
         val NON_LETTER_PATTERN = Regex("""[^\p{L}]+""")
     }
 
@@ -54,8 +53,7 @@ class WordCloudService(
         .asFlow()
 
     private fun isValidWord(personAndWord: PersonAndWord): Boolean =
-        VALID_WORD_PATTERN.matches(personAndWord.word)
-                && personAndWord.word.length in minWordLength..maxWordLength
+        personAndWord.word.length in minWordLength..maxWordLength
                 && !stopWords.contains(personAndWord.word)
 
     private fun updateWordsForPerson(
