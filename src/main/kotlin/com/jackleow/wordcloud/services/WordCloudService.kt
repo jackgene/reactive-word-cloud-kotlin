@@ -29,7 +29,7 @@ class WordCloudService(
         )
 
         val VALID_WORD_PATTERN = Regex("""(\p{L}+(?:-\p{L}+)*)""")
-        val WORD_SEPARATOR_PATTERN = Regex("""[^\p{L}]+""")
+        val NON_LETTER_PATTERN = Regex("""[^\p{L}]+""")
     }
 
     private val wordCloudConfig: ApplicationConfig = config.config("wordCloud")
@@ -39,10 +39,16 @@ class WordCloudService(
     private val stopWords: Set<String> = wordCloudConfig.property("stopWords").getList().toSet()
 
     private fun normalizeText(chatMessage: ChatMessage): PersonAndText =
-        PersonAndText(chatMessage.sender, chatMessage.text.lowercase())
+        PersonAndText(
+            chatMessage.sender,
+            chatMessage.text
+                .replace(NON_LETTER_PATTERN, " ")
+                .trim()
+                .lowercase()
+        )
 
-    private fun splitIntoWords(personAndText: PersonAndText): Flow<PersonAndWord> = WORD_SEPARATOR_PATTERN
-        .split(personAndText.text.trim())
+    private fun splitIntoWords(personAndText: PersonAndText): Flow<PersonAndWord> = personAndText.text
+        .split(" ")
         .map { word: String -> PersonAndWord(personAndText.person, word) }
         .reversed()
         .asFlow()
