@@ -9,15 +9,16 @@ data class ExtractedWord(
 )
 
 @Serializable
-data class ChatMessageAndWords(
+data class Event(
     val chatMessage: ChatMessage,
     val normalizedText: String,
-    val words: List<ExtractedWord>
+    val words: List<ExtractedWord>,
+    val wordsBySender: Map<String, List<String>>,
+    val countsByWord: Map<String, Int>
 )
 
 @Serializable
 data class DebuggingCounts(
-    val chatMessagesAndWords: List<ChatMessageAndWords>,
-    val wordsBySender: Map<String, List<String>>,
+    val history: List<Event>,
     val countsByWord: Map<String, Int>
 )
