@@ -1,7 +1,7 @@
 package com.jackleow.wordcloud.services
 
 import com.jackleow.wordcloud.models.ChatMessage
-import com.jackleow.wordcloud.models.ChatMessageAndWords
+import com.jackleow.wordcloud.models.Event
 import com.jackleow.wordcloud.models.DebuggingCounts
 import com.jackleow.wordcloud.models.ExtractedWord
 import com.jackleow.wordcloud.services.WordCloudService.Companion.NON_LETTER_PATTERN
@@ -36,28 +36,29 @@ class DebuggingWordCloudService(
             )
         }
         .runningFold(
-            DebuggingCounts(listOf(), mapOf(), mapOf())
-        ) { accum: DebuggingCounts, (msg: ChatMessage, normalizedText: String, extractedWords: List<ExtractedWord>) ->
+            Pair(DebuggingCounts(listOf(), mapOf()), mapOf<String, List<String>>())
+        ) { (accum: DebuggingCounts, oldWordsBySender: Map<String, List<String>>), (msg: ChatMessage, normalizedText: String, extractedWords: List<ExtractedWord>) ->
             val validWords: List<String> = extractedWords
                 .mapNotNull { if (it.isValid) it.word else null }
-            val wordsBySender: Map<String, List<String>> =
-                accum.wordsBySender.let { wordsBySender: Map<String, List<String>> ->
-                    val oldWords: List<String> = wordsBySender[msg.sender] ?: listOf()
-                    val newWords: List<String> = (validWords + oldWords)
-                        .distinct()
-                        .take(maxWordsPerPerson)
-
-                    wordsBySender + (msg.sender to newWords)
-                }
-            accum.copy(
-                chatMessagesAndWords = accum.chatMessagesAndWords + ChatMessageAndWords(
-                    msg, normalizedText, extractedWords
+            val oldWords: List<String> = oldWordsBySender[msg.sender] ?: listOf()
+            val newWords: List<String> = (validWords + oldWords)
+                .distinct()
+                .take(maxWordsPerPerson)
+            val newWordsBySender: Map<String, List<String>> =
+                oldWordsBySender + (msg.sender to newWords)
+            val countsByWord = newWordsBySender
+                .flatMap { it.value.map { token -> token to it.key } }
+                .groupBy({ it.first }, { it.second }).mapValues { it.value.size }
+            Pair(
+                accum.copy(
+                    history = accum.history + Event(
+                        msg, normalizedText, extractedWords, newWordsBySender, countsByWord
+                    ),
+                    countsByWord = countsByWord
                 ),
-                wordsBySender = wordsBySender,
-                countsByWord = wordsBySender
-                    .flatMap { it.value.map { token -> token to it.key } }
-                    .groupBy({ it.first }, { it.second }).mapValues { it.value.size }
+                newWordsBySender
             )
         }
+        .map { (counts: DebuggingCounts, _) -> counts }
         .shareIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, 1)
 }
