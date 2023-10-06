@@ -22,7 +22,7 @@ class DebuggingWordCloudService(
     val wordCounts: Flow<DebuggingCounts> = chatMessages
         .map { msg: ChatMessage ->
             val normalizedText: String = msg.text.replace(NON_LETTER_PATTERN, " ").trim().lowercase()
-            val words: List<String> = normalizedText.split(" ").reversed()
+            val words: List<String> = normalizedText.split(" ")
 
             Triple(
                 msg, normalizedText,
