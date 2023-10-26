@@ -14,7 +14,7 @@ class DebuggingWordCloudService(
     config: ApplicationConfig, chatMessages: Flow<ChatMessage>
 ) {
     private val wordCloudConfig: ApplicationConfig = config.config("wordCloud")
-    private val maxWordsPerPerson: Int = wordCloudConfig.property("maxWordsPerPerson").getString().toInt()
+    private val maxWordsPerSender: Int = wordCloudConfig.property("maxWordsPerSender").getString().toInt()
     private val minWordLength: Int = wordCloudConfig.property("minWordLength").getString().toInt()
     private val maxWordLength: Int = wordCloudConfig.property("maxWordLength").getString().toInt()
     private val stopWords: Set<String> = wordCloudConfig.property("stopWords").getList().toSet()
@@ -43,7 +43,7 @@ class DebuggingWordCloudService(
             val oldWords: List<String> = oldWordsBySender[msg.sender] ?: listOf()
             val newWords: List<String> = (validWords + oldWords)
                 .distinct()
-                .take(maxWordsPerPerson)
+                .take(maxWordsPerSender)
             val newWordsBySender: Map<String, List<String>> =
                 oldWordsBySender + (msg.sender to newWords)
             val countsByWord = newWordsBySender
