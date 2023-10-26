@@ -2,7 +2,7 @@
 
 package com.jackleow.wordcloud.services
 
-import com.jackleow.wordcloud.data.WordsByPersonRepository
+import com.jackleow.wordcloud.data.WordsBySenderRepository
 import com.jackleow.wordcloud.models.ChatMessage
 import com.jackleow.wordcloud.models.Counts
 import io.github.nomisRev.kafka.*
@@ -14,17 +14,17 @@ import kotlinx.coroutines.flow.*
 
 class WordCloudService(
     config: ApplicationConfig,
-    wordsByPersonRepository: WordsByPersonRepository,
+    wordsBySenderRepository: WordsBySenderRepository,
     chatMessages: Flow<ChatMessage>
 ) {
     companion object {
-        private data class PersonAndText(
-            val person: String,
+        private data class SenderAndText(
+            val sender: String,
             val text: String
         )
 
-        private data class PersonAndWord(
-            val person: String,
+        private data class SenderAndWord(
+            val sender: String,
             val word: String
         )
 
@@ -32,13 +32,13 @@ class WordCloudService(
     }
 
     private val wordCloudConfig: ApplicationConfig = config.config("wordCloud")
-    private val maxWordsPerPerson: Int = wordCloudConfig.property("maxWordsPerPerson").getString().toInt()
+    private val maxWordsPerSender: Int = wordCloudConfig.property("maxWordsPerSender").getString().toInt()
     private val minWordLength: Int = wordCloudConfig.property("minWordLength").getString().toInt()
     private val maxWordLength: Int = wordCloudConfig.property("maxWordLength").getString().toInt()
     private val stopWords: Set<String> = wordCloudConfig.property("stopWords").getList().toSet()
 
-    private fun normalizeText(chatMessage: ChatMessage): PersonAndText =
-        PersonAndText(
+    private fun normalizeText(chatMessage: ChatMessage): SenderAndText =
+        SenderAndText(
             chatMessage.sender,
             chatMessage.text
                 .replace(NON_LETTER_PATTERN, " ")
@@ -46,39 +46,39 @@ class WordCloudService(
                 .lowercase()
         )
 
-    private fun splitIntoWords(personAndText: PersonAndText): Flow<PersonAndWord> = personAndText.text
+    private fun splitIntoWords(senderAndText: SenderAndText): Flow<SenderAndWord> = senderAndText.text
         .split(" ")
-        .map { word: String -> PersonAndWord(personAndText.person, word) }
+        .map { word: String -> SenderAndWord(senderAndText.sender, word) }
         .reversed()
         .asFlow()
 
-    private fun isValidWord(personAndWord: PersonAndWord): Boolean =
-        personAndWord.word.length in minWordLength..maxWordLength
-                && !stopWords.contains(personAndWord.word)
+    private fun isValidWord(senderAndWord: SenderAndWord): Boolean =
+        senderAndWord.word.length in minWordLength..maxWordLength
+                && !stopWords.contains(senderAndWord.word)
 
-    private fun updateWordsForPerson(
-        wordsByPerson: Map<String, List<String>>,
-        personAndWord: PersonAndWord
+    private fun updateWordsForSender(
+        wordsBySender: Map<String, List<String>>,
+        senderAndWord: SenderAndWord
     ): Map<String, List<String>> {
-        val oldWords: List<String> = wordsByPerson[personAndWord.person] ?: listOf()
-        val newWords: List<String> = (listOf(personAndWord.word) + oldWords).distinct().take(maxWordsPerPerson)
+        val oldWords: List<String> = wordsBySender[senderAndWord.sender] ?: listOf()
+        val newWords: List<String> = (listOf(senderAndWord.word) + oldWords).distinct().take(maxWordsPerSender)
 
-        return wordsByPerson + (personAndWord.person to newWords)
+        return wordsBySender + (senderAndWord.sender to newWords)
     }
 
-    private fun countWords(wordsByPerson: Map<String, List<String>>): Map<String, Int> = wordsByPerson
+    private fun countWords(wordsBySender: Map<String, List<String>>): Map<String, Int> = wordsBySender
         .flatMap { it.value.map { word -> word to it.key } }
         .groupBy({ it.first }, { it.second }).mapValues { it.value.size }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val wordCounts: Flow<Counts> = flow { emit(wordsByPersonRepository.load()) }
-        .flatMapLatest { initialWordsByPerson: Map<String, List<String>> ->
+    val wordCounts: Flow<Counts> = flow { emit(wordsBySenderRepository.load()) }
+        .flatMapLatest { initialWordsBySender: Map<String, List<String>> ->
             chatMessages
                 .map(::normalizeText)
                 .flatMapConcat(::splitIntoWords)
                 .filter(::isValidWord)
-                .runningFold(initialWordsByPerson, ::updateWordsForPerson)
-                .onEach(wordsByPersonRepository::save)
+                .runningFold(initialWordsBySender, ::updateWordsForSender)
+                .onEach(wordsBySenderRepository::save)
                 .map(::countWords)
                 .map(::Counts)
                 .shareIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, 1)

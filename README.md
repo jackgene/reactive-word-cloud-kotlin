@@ -10,5 +10,5 @@ kafka-topics --bootstrap-server=localhost:9092 --describe --topic=word-cloud.cha
 
 Observe Kafka topic chat message records:
 ```shell
-kafka-console-consumer --bootstrap-server=localhost:9092 --topic=word-cloud.words-by-person
+kafka-console-consumer --bootstrap-server=localhost:9092 --topic=word-cloud.chat-message
 ```
