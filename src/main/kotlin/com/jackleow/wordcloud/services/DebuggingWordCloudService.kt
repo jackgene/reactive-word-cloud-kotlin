@@ -27,7 +27,7 @@ class DebuggingWordCloudService(
             Triple(
                 msg, normalizedText,
                 words.map { word ->
-                    ExtractedWord(
+                    Pair(
                         word,
                         word.length in minWordLength..maxWordLength
                                 && !stopWords.contains(word)
@@ -37,26 +37,47 @@ class DebuggingWordCloudService(
         }
         .runningFold(
             Pair(DebuggingCounts(listOf(), mapOf()), mapOf<String, List<String>>())
-        ) { (accum: DebuggingCounts, oldWordsBySender: Map<String, List<String>>), (msg: ChatMessage, normalizedText: String, extractedWords: List<ExtractedWord>) ->
-            val validWords: List<String> = extractedWords
-                .mapNotNull { if (it.isValid) it.word else null }
-            val oldWords: List<String> = oldWordsBySender[msg.sender] ?: listOf()
-            val newWords: List<String> = (validWords + oldWords)
-                .distinct()
-                .take(maxWordsPerSender)
-            val newWordsBySender: Map<String, List<String>> =
-                oldWordsBySender + (msg.sender to newWords)
-            val countsByWord = newWordsBySender
-                .flatMap { it.value.map { token -> token to it.key } }
-                .groupBy({ it.first }, { it.second }).mapValues { it.value.size }
+        ) { (accum: DebuggingCounts, oldWordsBySender: Map<String, List<String>>), (msg: ChatMessage, normalizedText: String, splitWords: List<Pair<String, Boolean>>) ->
+            val extractedWords: List<ExtractedWord> = splitWords
+                .runningFold(
+                    ExtractedWord(
+                        "",
+                        false,
+                        oldWordsBySender,
+                        mapOf()
+                    )
+                ) { extractedWord: ExtractedWord, nextWord: Pair<String, Boolean> ->
+                    val (word: String, isValid: Boolean) = nextWord
+                    if (isValid) {
+                        val oldWords: List<String> = extractedWord.wordsBySender[msg.sender] ?: listOf()
+                        val newWords: List<String> = (listOf(word) + oldWords)
+                            .distinct()
+                            .take(maxWordsPerSender)
+                        val newWordsBySender: Map<String, List<String>> =
+                            oldWordsBySender + (msg.sender to newWords)
+                        val countsByWord = newWordsBySender
+                            .flatMap { it.value.map { token -> token to it.key } }
+                            .groupBy({ it.first }, { it.second }).mapValues { it.value.size }
+
+                        extractedWord.copy(
+                            word = word,
+                            isValid = true,
+                            wordsBySender = newWordsBySender,
+                            countsByWord = countsByWord
+                        )
+                    } else {
+                        extractedWord.copy(word = word, isValid = false)
+                    }
+                }
+                .drop(1)
             Pair(
                 accum.copy(
                     history = accum.history + Event(
-                        msg, normalizedText, extractedWords, newWordsBySender, countsByWord
+                        msg, normalizedText, extractedWords
                     ),
-                    countsByWord = countsByWord
+                    countsByWord = extractedWords.lastOrNull()?.countsByWord ?: mapOf()
                 ),
-                newWordsBySender
+                extractedWords.lastOrNull()?.wordsBySender ?: mapOf()
             )
         }
         .map { (counts: DebuggingCounts, _) -> counts }
