@@ -77,9 +77,9 @@ class DebuggingWordCloudService(
                     history = accum.history + Event(
                         msg, normalizedText, extractedWords
                     ),
-                    countsByWord = extractedWords.lastOrNull()?.countsByWord ?: mapOf()
+                    countsByWord = extractedWords.firstOrNull()?.countsByWord ?: mapOf()
                 ),
-                extractedWords.lastOrNull()?.wordsBySender ?: mapOf()
+                extractedWords.firstOrNull()?.wordsBySender ?: mapOf()
             )
         }
         .map { (counts: DebuggingCounts, _) -> counts }
