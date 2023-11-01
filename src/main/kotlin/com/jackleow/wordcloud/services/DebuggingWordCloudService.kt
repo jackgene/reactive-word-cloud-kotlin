@@ -39,6 +39,7 @@ class DebuggingWordCloudService(
             Pair(DebuggingCounts(listOf(), mapOf()), mapOf<String, List<String>>())
         ) { (accum: DebuggingCounts, oldWordsBySender: Map<String, List<String>>), (msg: ChatMessage, normalizedText: String, splitWords: List<Pair<String, Boolean>>) ->
             val extractedWords: List<ExtractedWord> = splitWords
+                .reversed()
                 .runningFold(
                     ExtractedWord(
                         "",
@@ -70,6 +71,7 @@ class DebuggingWordCloudService(
                     }
                 }
                 .drop(1)
+                .reversed()
             Pair(
                 accum.copy(
                     history = accum.history + Event(
