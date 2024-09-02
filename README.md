@@ -8,7 +8,17 @@ kafka-configs --bootstrap-server=localhost:9092 --alter --entity-type=topics --e
 kafka-topics --bootstrap-server=localhost:9092 --describe --topic=word-cloud.chat-message
 ```
 
+Delete Kafka topic:
+```shell
+kafka-topics --bootstrap-server=localhost:9092 --delete --topic=word-cloud.chat-message
+```
+
 Observe Kafka topic chat message records:
 ```shell
 kafka-console-consumer --bootstrap-server=localhost:9092 --topic=word-cloud.chat-message
+```
+
+Publish chat message records to Kafka topic:
+```shell
+kafka-console-producer --bootstrap-server=localhost:9092 --topic=word-cloud.chat-message
 ```
