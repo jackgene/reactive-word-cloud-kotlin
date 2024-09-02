@@ -1,11 +1,8 @@
-@file:Suppress("TYPEALIAS_EXPANSION_DEPRECATION")
-
 package com.jackleow.wordcloud.services
 
 import com.jackleow.wordcloud.data.WordsBySenderRepository
 import com.jackleow.wordcloud.models.ChatMessage
 import com.jackleow.wordcloud.models.Counts
-import io.github.nomisRev.kafka.*
 import io.ktor.server.config.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
